@@ -1,0 +1,138 @@
+{
+  "name": "pod_rejection_due_to_pod_security_policy_psp_violation",
+  "description": "This incident type occurs when a Pod in Kubernetes is rejected due to a violation of the Pod Security Policy (PSP). A Pod Security Policy is a set of rules that specify the conditions that a pod must meet to be accepted and run in a Kubernetes cluster. These rules are designed to prevent security risks and ensure that pods run with the least privilege necessary. When a pod violates the PSP, it is rejected, and the incident is triggered.",
+  "params": [
+    {
+      "name": "ROLE_NAME",
+      "value": ""
+    },
+    {
+      "name": "SERVICEACCOUNT_NAME",
+      "value": ""
+    },
+    {
+      "name": "POD_NAME",
+      "value": ""
+    },
+    {
+      "name": "CONTAINER_NAME",
+      "value": ""
+    },
+    {
+      "name": "PSP_NAME",
+      "value": ""
+    },
+    {
+      "name": "NAMESPACE",
+      "value": ""
+    },
+    {
+      "name": "K8S_CLUSTER_NAME",
+      "value": ""
+    }
+  ],
+  "cells": [
+    {
+      "name": "cell_1",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Pod Rejection Due to Pod Security Policy (PSP) Violation\nThis incident type occurs when a Pod in Kubernetes is rejected due to a violation of the Pod Security Policy (PSP). A Pod Security Policy is a set of rules that specify the conditions that a pod must meet to be accepted and run in a Kubernetes cluster. These rules are designed to prevent security risks and ensure that pods run with the least privilege necessary. When a pod violates the PSP, it is rejected, and the incident is triggered."
+    },
+    {
+      "name": "cell_2",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## List all Pods in the Namespace that are in the Pending state"
+    },
+    {
+      "name": "cell_3",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "pod | k8s_cluster_name=$K8S_CLUSTER_NAME | app='shoreline' | limit=1 | random=1 | `kubectl get pods -n ${NAMESPACE} --field-selector status.phase=Pending`"
+    },
+    {
+      "name": "cell_4",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Get the detailed status of a Pod that was rejected due to a PSP violation"
+    },
+    {
+      "name": "cell_5",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "pod | k8s_cluster_name=$K8S_CLUSTER_NAME | app='shoreline' | limit=1 | random=1 | `kubectl describe pod ${POD_NAME} -n ${NAMESPACE}`"
+    },
+    {
+      "name": "cell_6",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the Pod Security Policy that was violated"
+    },
+    {
+      "name": "cell_7",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "pod | k8s_cluster_name=$K8S_CLUSTER_NAME | app='shoreline' | limit=1 | random=1 | `kubectl describe psp ${PSP_NAME}`"
+    },
+    {
+      "name": "cell_8",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## List all ServiceAccounts in the Namespace that are allowed to use the PSP"
+    },
+    {
+      "name": "cell_9",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "pod | k8s_cluster_name=$K8S_CLUSTER_NAME | app='shoreline' | limit=1 | random=1 | `kubectl get psp ${PSP_NAME} -o=jsonpath='{.spec.serviceAccountName}'`"
+    },
+    {
+      "name": "cell_10",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Get the detailed status of the ServiceAccount that the Pod is using"
+    },
+    {
+      "name": "cell_11",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "pod | k8s_cluster_name=$K8S_CLUSTER_NAME | app='shoreline' | limit=1 | random=1 | `kubectl describe sa ${SERVICEACCOUNT_NAME} -n ${NAMESPACE}`"
+    },
+    {
+      "name": "cell_12",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## List all Roles that are bound to the ServiceAccount"
+    },
+    {
+      "name": "cell_13",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "pod | k8s_cluster_name=$K8S_CLUSTER_NAME | app='shoreline' | limit=1 | random=1 | `kubectl get roles -o=jsonpath='{range .items[*]}{.metadata.name}{\"\\t\"}{.metadata.namespace}{\"\\n\"}{end}' --field-selector metadata.annotations.'rbac.authorization.kubernetes.io/autoupdate'='true',metadata.annotations.'rbac.authorization.kubernetes.io/autoupdate-after-anyclean'=true | xargs -n2 sh -c 'kubectl get role $0 -n $1 -o=jsonpath=\"{.metadata.name}\\t{.metadata.namespace}\\t{.metadata.annotations}\\n\"'`"
+    },
+    {
+      "name": "cell_14",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Get the detailed status of the Role that the ServiceAccount is bound to"
+    },
+    {
+      "name": "cell_15",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "pod | k8s_cluster_name=$K8S_CLUSTER_NAME | app='shoreline' | limit=1 | random=1 | `kubectl describe role ${ROLE_NAME} -n ${NAMESPACE}`"
+    },
+    {
+      "name": "cell_16",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check if the pod has any privileged containers running. If yes, remove the privilege from the container, and try to deploy the pod again."
+    },
+    {
+      "name": "cell_17",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "pod | k8s_cluster_name=$K8S_CLUSTER_NAME | app='shoreline' | random=1 | limit=1 | invoke_get_pod_privilege($POD_NAME, $CONTAINER_NAME)"
+    }
+  ]
+}
